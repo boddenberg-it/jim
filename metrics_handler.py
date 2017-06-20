@@ -1,6 +1,7 @@
 #!/usb/bin/python
 
 # jenkins dependency (pip install jenkinsapi)
+import collections
 import jenkinsapi
 import pprint
 pp = pprint.PrettyPrinter(indent=4)
@@ -11,30 +12,37 @@ jenkins = ""
 
 def log(msg):
     print " "
-    print "msg"
+    print msg
 
 # already filter jobs, to only hold filtered ones!
 def load_jobs(url):
     log("Initialising jenkinsapi object...")
-    jenkins = Jenkins(JENKINS_URL)
+    jenkins = Jenkins(url)
     log("Obtaining jobs...")
     jobs = jenkins.keys()
     log("All found jobs:")
     pp.pprint(jobs)
-
+    print " "
     jenkins_server = collections.namedtuple('Jenkins', ['jenkins', 'jobs'])
+    jenkins_server.jenkins = jenkins
+    jenkins_server.jobs = jobs
     return jenkins_server
 
 def evaluate_queues(url):
-    jenkins = load_jobs()
+    jenkins = load_jobs(url)
     jobs = jenkins.jobs
     jenkins = jenkins.jenkins
 
     for job in jobs:
+        # TODO: fix matrix axis, extract method here
+        #for run in runs:
+        #    print "Evaluating matrix run %s" % run
+        #    if jenkins[job].is_queued():
+        #        print("%s is queueing") % job
+        print "Evaluating %s" % job
         if jenkins[job].is_queued():
             print("%s is queueing") % job
-        else:
-            print "not queueing B)"
+        print " "
 
 def evaluate_jobs(jenkins, jobs):
     for job in jobs:
