@@ -1,22 +1,42 @@
-#!/usr/bin/python
+#!/usb/bin/python
 
 # jenkins dependency (pip install jenkinsapi)
 import jenkinsapi
 import pprint
+pp = pprint.PrettyPrinter(indent=4)
 
 from jenkinsapi.jenkins import Jenkins
 
-JENKINS_URL = 'https://jenkins.blobb.me'
-pp = pprint.PrettyPrinter(indent=4)
+jenkins = ""
 
-def evaluate_queues(jobs):
+def log(msg):
+    print " "
+    print "msg"
+
+# already filter jobs, to only hold filtered ones!
+def load_jobs(url):
+    log("Initialising jenkinsapi object...")
+    jenkins = Jenkins(JENKINS_URL)
+    log("Obtaining jobs...")
+    jobs = jenkins.keys()
+    log("All found jobs:")
+    pp.pprint(jobs)
+
+    jenkins_server = collections.namedtuple('Jenkins', ['jenkins', 'jobs'])
+    return jenkins_server
+
+def evaluate_queues(url):
+    jenkins = load_jobs()
+    jobs = jenkins.jobs
+    jenkins = jenkins.jenkins
+
     for job in jobs:
         if jenkins[job].is_queued():
             print("%s is queueing") % job
         else:
             print "not queueing B)"
 
-def evaluate_jobs(jobs):
+def evaluate_jobs(jenkins, jobs):
     for job in jobs:
         try:
             oldest = jenkins[job].get_first_build().get_number()
@@ -66,19 +86,3 @@ def obtain_lint_information():
 
 def obtain_test_information():
     print "tbc..."
-
-# init jenkinsapi
-print " "
-print "Initialising jenkinsapi object..."
-jenkins = Jenkins(JENKINS_URL)
-# load jobs
-print " "
-print "Obtaining jobs..."
-jobs = jenkins.keys()
-print " "
-print "All found jobs:"
-pp.pprint(jobs)
-print " "
-
-evaluate_queues(jobs)
-# evaluate_jobs(jobs)
