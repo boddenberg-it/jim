@@ -11,8 +11,8 @@ from jenkinsapi.jenkins import Jenkins
 jenkins = ""
 
 def log(msg):
-    print " "
-    print msg
+    print(" ")
+    print(msg)
 
 # already filter jobs, to only hold filtered ones!
 def load_jobs(url):
@@ -22,7 +22,7 @@ def load_jobs(url):
     jobs = jenkins.keys()
     log("All found jobs:")
     pp.pprint(jobs)
-    print " "
+    print(" ")
     jenkins_server = collections.namedtuple('Jenkins', ['jenkins', 'jobs'])
     jenkins_server.jenkins = jenkins
     jenkins_server.jobs = jobs
@@ -39,10 +39,10 @@ def evaluate_queues(url):
         #    print "Evaluating matrix run %s" % run
         #    if jenkins[job].is_queued():
         #        print("%s is queueing") % job
-        print "Evaluating %s" % job
+        print("Evaluating %s" % job)
         if jenkins[job].is_queued():
-            print("%s is queueing") % job
-        print " "
+            print("%s is queueing" % job)
+        print(" ")
 
 def evaluate_jobs(jenkins, jobs):
     for job in jobs:
@@ -57,40 +57,40 @@ def evaluate_jobs(jenkins, jobs):
                 try:
                     runs = jenkins[job].get_matrix_runs()
                     for run in runs:
-                        print "Evaluating matrix run %s" % run
+                        print("Evaluating matrix run %s" % run)
                         obtain_build_information(jenkins[run])
                 except Exception:
                     obtain_build_information(jenkins[job][current])
                 current += 1
 
         except Exception:
-            print "'%s' did not run yet, skipping" % job
+            print("'%s' did not run yet, skipping" % job)
 
 def obtain_build_information(job):
-    print "Evaluating '%s'" % job
+    print("Evaluating '%s'" % job)
     try:
         # TODO: check whether format is influx conform
         number = job.get_number()
-        print number
-        print job.get_timestamp()
-        print job.get_duration()
-        print job.get_status()
+        print(number)
+        print(job.get_timestamp())
+        print(job.get_duration())
+        print(job.get_status())
     except ValueError:
-        print "'%s' did not run yet, skipping." % job
+        print("'%s' did not run yet, skipping." % job)
     try:
-        print job.get_slave()
+        print(job.get_slave())
     except Exception:
-        print "%s does not provide any slave information" % (job)
+        print("%s does not provide any slave information" % job)
     #print job.get_upstream_job_name()
     #print job.get_params()
     try:
-        print job.get_revision()
+        print(job.get_revision())
     except Exception:
-        print "%s does not provide any revision" % (job)
-    print " "
+        print("%s does not provide any revision" % job)
+    print(" ")
 
 def obtain_lint_information():
-    print "tbc..."
+    print("tbc...")
 
 def obtain_test_information():
-    print "tbc..."
+    print("tbc...")
