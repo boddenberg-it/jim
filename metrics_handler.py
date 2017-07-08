@@ -8,31 +8,27 @@ pp = pprint.PrettyPrinter(indent=4)
 
 from jenkinsapi.jenkins import Jenkins
 
-jenkins = ""
+jenkins = None
+jobs = None
 
 def log(msg):
     print(" ")
     print(msg)
 
 # already filter jobs, to only hold filtered ones!
-def load_jobs(url):
+def init_jenkins(url):
+    global jenkins
+    global jobs
+
     log("Initialising jenkinsapi object...")
     jenkins = Jenkins(url)
     log("Obtaining jobs...")
     jobs = jenkins.keys()
     log("All found jobs:")
     pp.pprint(jobs)
-    print(" ")
-    jenkins_server = collections.namedtuple('Jenkins', ['jenkins', 'jobs'])
-    jenkins_server.jenkins = jenkins
-    jenkins_server.jobs = jobs
-    return jenkins_server
 
-def evaluate_queues(url):
-    jenkins = load_jobs(url)
-    jobs = jenkins.jobs
-    jenkins = jenkins.jenkins
-
+def evaluate_queues():
+    print("\n\nOBTAINING QUEUES FOR JOBS\n")
     for job in jobs:
         # TODO: fix matrix axis, extract method here
         #for run in runs:
@@ -41,15 +37,15 @@ def evaluate_queues(url):
         #        print("%s is queueing") % job
         print("Evaluating %s" % job)
         if jenkins[job].is_queued():
-            print("%s is queueing" % job)
-        print(" ")
+            print("\t%s is queueing" % job)
 
-def evaluate_jobs(jenkins, jobs):
+def evaluate_jobs():
     for job in jobs:
         try:
             oldest = jenkins[job].get_first_build().get_number()
             latest = jenkins[job].get_last_completed_build().get_number()
 
+            print("%s %s" % (oldest, latest))
             # TODO: think about not always resending same value
             current = oldest
 
