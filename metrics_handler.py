@@ -1,92 +1,68 @@
-#!/usb/bin/python
-
-# jenkins dependency (pip install jenkinsapi)
-import collections
-import jenkinsapi
+#!/usb/bin/python3
+import json
+import requests
 import pprint
+
+def req(url):
+    response = requests.get(url)
+    return json.loads(response.text)
+
+
+def jobs(jenkins_url):
+    jobs = []
+    json = req('%s/view/all/api/json/?tree=jobs[url]' % jenkins_url)
+    for job in json['jobs']:
+        # TODO: traverse folder
+        jobs.append(job['url'])
+    return jobs
+
+def builds_of(job_url):
+    # return ['https://jenkins.blobb.me/job/check_xml_report/45']
+    builds = []
+    json = req("%s/api/json/?pretty=true&tree=builds[number]" % job_url)
+    try:
+        for build in json['builds']:
+            builds.append("%s%s" % (job_url, build['number']))
+    except Exception:
+        pass
+    return builds
+
+# init pretty-print
 pp = pprint.PrettyPrinter(indent=4)
 
-from jenkinsapi.jenkins import Jenkins
+for job in jobs('https://jenkins.blobb.me/'):
 
-jenkins = None
-jobs = None
+    for build in (builds_of(job)):
 
-def log(msg):
-    print(" ")
-    print(msg)
+        print build
+        #?pretty&tree=duration,result,builtOn # builtOn only for none Pipeline jobs
+        resp = req("%s/api/json/?tree=duration,result" % build)
+        print("result: %s, duration %s" % (resp['result'],resp['duration']))
 
-# already filter jobs, to only hold filtered ones!
-def init_jenkins(url):
-    global jenkins
-    global jobs
+        # check whether compiler warnings,
+        warnings = None
+        resp = req("%s/api/json/?tree=actions[result[numberOfFixedWarnings,numberOfHighPriorityWarnings,numberOfLowPriorityWarnings,numberOfNewWarnings,numberOfNormalPriorityWarnings,numberOfWarnings]]" % build)
+        for key in resp['actions']:
+            try:
+                warnings = key['result']
+            except Exception:
+                pass
+        if warnings:
+            # pp.pprint(warnings)
+            print(warnings['numberOfFixedWarnings']) # etcetera pp
 
-    log("Initialising jenkinsapi object...")
-    jenkins = Jenkins(url)
-    log("Obtaining jobs...")
-    jobs = jenkins.keys()
-    log("All found jobs:")
-    pp.pprint(jobs)
-
-def evaluate_queues():
-    print("\n\nOBTAINING QUEUES FOR JOBS\n")
-    for job in jobs:
-        # TODO: fix matrix axis, extract method here
-        #for run in runs:
-        #    print "Evaluating matrix run %s" % run
-        #    if jenkins[job].is_queued():
-        #        print("%s is queueing") % job
-        print("Evaluating %s" % job)
-        if jenkins[job].is_queued():
-            print("\t%s is queueing" % job)
-
-def evaluate_jobs():
-    for job in jobs:
+        xml_report = None
+        resp = req("%s/api/json/?depth=3&tree=actions[failCount,skipCount,totalCount]" % build)
         try:
-            oldest = jenkins[job].get_first_build().get_number()
-            latest = jenkins[job].get_last_completed_build().get_number()
-
-            print("%s %s" % (oldest, latest))
-            # TODO: think about not always resending same value
-            current = oldest
-
-            while(current < latest):
-                try:
-                    runs = jenkins[job].get_matrix_runs()
-                    for run in runs:
-                        print("Evaluating matrix run %s" % run)
-                        obtain_build_information(jenkins[run])
-                except Exception:
-                    obtain_build_information(jenkins[job][current])
-                current += 1
-
+            for key in resp['actions']:
+                if key['_class'] == 'hudson.tasks.junit.TestResultAction':
+                    xml_report = key
         except Exception:
-            print("'%s' did not run yet, skipping" % job)
+            pass
+        if xml_report:
+            # pp.pprint(key)
+            print(xml_report['totalCount'])
 
-def obtain_build_information(job):
-    print("Evaluating '%s'" % job)
-    try:
-        # TODO: check whether format is influx conform
-        number = job.get_number()
-        print(number)
-        print(job.get_timestamp())
-        print(job.get_duration())
-        print(job.get_status())
-    except ValueError:
-        print("'%s' did not run yet, skipping." % job)
-    try:
-        print(job.get_slave())
-    except Exception:
-        print("%s does not provide any slave information" % job)
-    #print job.get_upstream_job_name()
-    #print job.get_params()
-    try:
-        print(job.get_revision())
-    except Exception:
-        print("%s does not provide any revision" % job)
-    print(" ")
-
-def obtain_lint_information():
-    print("tbc...")
-
-def obtain_test_information():
-    print("tbc...")
+        # TODO: check stuff for job e.g. matrix project, buildFlow, Pipeline (stages), Multijob etcetera pp
+        # /api/json/?pretty&tree=runs[url]
+        print
