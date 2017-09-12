@@ -1,11 +1,11 @@
 #!/usb/bin/python3
-
 import json
 import requests
 
 def req(url):
     response = requests.get(url)
     return json.loads(response.text)
+
 
 def jobs(jenkins_url):
     jobs = []
@@ -26,9 +26,32 @@ def builds_of(job_url):
     return builds
 
 for job in jobs('https://jenkins.blobb.me/'):
-    metrics_of(builds_of(job)))
 
+    for build in (builds_of(job)):
+        print build
+        #?pretty&tree=duration,result,builtOn # builtOn only for none Pipeline jobs
+        resp = req("%s/api/json/?tree=duration,result" % build)
+        print("result: %s, duration %s" % (resp['result'],resp['duration']))
 
+    # check whether compiler warnings,
+        resp = req("%s/api/json/?depth=3&tree=actions[result[numberOfFixedWarnings,numberOfHighPriorityWarnings,numberOfLowPriorityWarnings,numberOfNewWarnings,numberOfNormalPriorityWarnings,numberOfWarnings]]" % build)
+        try:
+            print(resp['result[numberOfFixedWarnings]'])
+            print('found!')
+        except Exception:
+            pass
+
+    #  check for xml unit report
+    #/api/json/?pretty&tree=actions[failCount,skipCount,totalCount]
+        resp = req("%s/api/json/?depth=3&tree=actions[failCount,skipCount,totalCount]" % build)
+        try:
+            print(resp['totalCount'])
+        except Exception:
+            pass
+
+    # matrix project
+    # /api/json/?pretty&tree=runs[url]
+        print
 #import urllib.request
 #r = urllib.request.urlopen('https://jenkins.blobb.me/view/all/api/json/?tree=jobs[url]')
 #print(r.read())
