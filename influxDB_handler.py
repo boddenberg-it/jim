@@ -1,6 +1,7 @@
 #!/usb/bin/python3
 import json
 import requests
+import pprint
 
 def req(url):
     response = requests.get(url)
@@ -16,6 +17,7 @@ def jobs(jenkins_url):
     return jobs
 
 def builds_of(job_url):
+    # return ['https://jenkins.blobb.me/job/check_xml_report/45']
     builds = []
     json = req("%s/api/json/?pretty=true&tree=builds[number]" % job_url)
     try:
@@ -25,33 +27,42 @@ def builds_of(job_url):
         pass
     return builds
 
+# init pretty-print
+pp = pprint.PrettyPrinter(indent=4)
+
 for job in jobs('https://jenkins.blobb.me/'):
 
     for build in (builds_of(job)):
+
         print build
         #?pretty&tree=duration,result,builtOn # builtOn only for none Pipeline jobs
         resp = req("%s/api/json/?tree=duration,result" % build)
         print("result: %s, duration %s" % (resp['result'],resp['duration']))
 
-    # check whether compiler warnings,
-        resp = req("%s/api/json/?depth=3&tree=actions[result[numberOfFixedWarnings,numberOfHighPriorityWarnings,numberOfLowPriorityWarnings,numberOfNewWarnings,numberOfNormalPriorityWarnings,numberOfWarnings]]" % build)
-        try:
-            print(resp['result[numberOfFixedWarnings]'])
-            print('found!')
-        except Exception:
-            pass
+        # check whether compiler warnings,
+        warnings = None
+        resp = req("%s/api/json/?tree=actions[result[numberOfFixedWarnings,numberOfHighPriorityWarnings,numberOfLowPriorityWarnings,numberOfNewWarnings,numberOfNormalPriorityWarnings,numberOfWarnings]]" % build)
+        for key in resp['actions']:
+            try:
+                warnings = key['result']
+            except Exception:
+                pass
+        if warnings:
+            # pp.pprint(warnings)
+            print(warnings['numberOfFixedWarnings']) # etcetera pp
 
-    #  check for xml unit report
-    #/api/json/?pretty&tree=actions[failCount,skipCount,totalCount]
+        xml_report = None
         resp = req("%s/api/json/?depth=3&tree=actions[failCount,skipCount,totalCount]" % build)
         try:
-            print(resp['totalCount'])
+            for key in resp['actions']:
+                if key['_class'] == 'hudson.tasks.junit.TestResultAction':
+                    xml_report = key
         except Exception:
             pass
+        if xml_report:
+            # pp.pprint(key)
+            print(xml_report['totalCount'])
 
-    # matrix project
-    # /api/json/?pretty&tree=runs[url]
+        # TODO: check stuff for job e.g. matrix project, buildFlow, Pipeline (stages), Multijob etcetera pp
+        # /api/json/?pretty&tree=runs[url]
         print
-#import urllib.request
-#r = urllib.request.urlopen('https://jenkins.blobb.me/view/all/api/json/?tree=jobs[url]')
-#print(r.read())
